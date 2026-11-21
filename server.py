@@ -47,6 +47,16 @@ def _pq_setting() -> Optional[bool]:
 
 auth = Authenticator()
 store = Store(os.environ.get("HEDWIG_DB", os.path.join(CURRENT_DIR, "data", "hedwig.db")))
+# Clean up any legacy fields stored in links from previous schemas
+_saved_links = store.get_json("links")
+if _saved_links and isinstance(_saved_links, dict):
+    _changed = False
+    for _k, _v in _saved_links.items():
+        if isinstance(_v, dict) and "scope_note" in _v:
+            _v.pop("scope_note", None)
+            _changed = True
+    if _changed:
+        store.put_json("links", _saved_links)
 audit_authority = AuditAuthority(os.environ.get(
     "HEDWIG_AUDIT_KEY", os.path.join(CURRENT_DIR, "data", "audit_ed25519.pem")), pq=_pq_setting(), store=store)
 qds_engine = TeleportationQDS(backend=os.environ.get("HEDWIG_BACKEND", "qiskit"), store=store, audit=audit_authority)
